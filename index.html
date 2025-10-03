@@ -1,12 +1,4 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-</head>
-<body>
-  <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -20,26 +12,7 @@
   <div class="login-page" id="login-page">
     <div class="login-box">
       <h2>Iniciar Sesión</h2>
-      <input type="text" id="usuario" placeholder="Usuario">
-      <input type="password" id="password" placeholder="Contraseña">
-      <button id="login-btn">Entrar</button>
-    </div>
-  </div>
-
-  <!-- ===== Modal Reglas ===== -->
-  <div class="modal" id="modal-reglas">
-    <div class="modal-content">
-      <h2>Reglamento del Foro</h2>
-      <p>
-        Bienvenido a <strong>Proyecto</strong>. Antes de participar, por favor respete las siguientes normas:
-      </p>
-      <ul>
-        <li>No publicar imágenes, archivos o videos con contenido sexual, violento o de carácter +18.</li>
-        <li>Se prohíbe incitar al odio, la discriminación o el acoso hacia otros usuarios.</li>
-        <li>Respete siempre la privacidad y opiniones de los demás.</li>
-        <li>Comparta únicamente contenido apropiado y relacionado al propósito del foro.</li>
-      </ul>
-      <button id="aceptar-reglas">Acepto</button>
+      <button id="google-login">Iniciar con Google</button>
     </div>
   </div>
 
@@ -51,238 +24,97 @@
       <button class="menu-btn" id="open-menu">➤</button>
     </header>
 
-    <!-- Menu Deslizable -->
-    <nav class="side-menu" id="side-menu">
-      <button class="close-btn" id="close-menu">◀</button>
-      <h3>Carpetas</h3>
-      <ul>
-        <li>📂 General</li>
-        <li>📂 Recursos</li>
-        <li>📂 Multimedia</li>
-      </ul>
-    </nav>
-
     <!-- Foro -->
     <main>
       <section class="foro">
         <h2>Foro de Proyecto</h2>
-        <form class="foro-form" id="foro-form">
-          <textarea placeholder="Escribe tu mensaje..."></textarea>
-          <input type="file" multiple>
-          <button type="submit">Publicar</button>
+        <form id="formulario-mensaje">
+          <input type="text" id="mensaje" placeholder="Escribe un mensaje...">
+          <button type="submit">Enviar</button>
         </form>
-        <div class="foro-posts" id="foro-posts">
-          <div class="post">
-            <p><strong>Usuario1:</strong> Bienvenidos al foro 🚀</p>
-          </div>
-        </div>
+        <div id="mensajes"></div>
       </section>
     </main>
   </div>
 
-  <script>
-    let isLoggedIn = false;
+  <!-- ===== Firebase + App ===== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } 
+      from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } 
+      from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-    const usuario = document.getElementById("usuario");
-    const password = document.getElementById("password");
-    const loginBtn = document.getElementById("login-btn");
+    // Configuración Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyDlvvtg68E7mEh71bwqX0YqWL31LTA4Q4A",
+      authDomain: "i-s-a-foro-3bf2d.firebaseapp.com",
+      projectId: "i-s-a-foro-3bf2d",
+      storageBucket: "i-s-a-foro-3bf2d.firebasestorage.app",
+      messagingSenderId: "413622307291",
+      appId: "1:413622307291:web:c6654f75ff038d0ca8bffe",
+      measurementId: "G-0HZ9B1SNWD"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    // DOM
     const loginPage = document.getElementById("login-page");
-    const modal = document.getElementById("modal-reglas");
-    const aceptarBtn = document.getElementById("aceptar-reglas");
     const mainPage = document.getElementById("main-page");
+    const googleLogin = document.getElementById("google-login");
 
-    // Navegación con Enter
-    usuario.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        password.focus();
+    // Login con Google
+    googleLogin.addEventListener("click", async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (err) {
+        console.error("Error en login:", err);
       }
     });
 
-    password.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        loginBtn.click();
-      }
-    });
-
-    // Login
-    loginBtn.addEventListener("click", () => {
-      if (usuario.value.trim() !== "" && password.value.trim() !== "") {
+    // Detectar sesión
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
         loginPage.style.display = "none";
-        modal.style.display = "flex";
-      }
-    });
-
-    aceptarBtn.addEventListener("click", () => {
-      modal.style.display = "none";
-      mainPage.style.display = "block";
-      isLoggedIn = true;
-    });
-
-    // Menú deslizable
-    const openMenu = document.getElementById("open-menu");
-    const closeMenu = document.getElementById("close-menu");
-    const sideMenu = document.getElementById("side-menu");
-
-    openMenu.addEventListener("click", () => {
-      sideMenu.style.right = "0";
-    });
-    closeMenu.addEventListener("click", () => {
-      sideMenu.style.right = "-250px";
-    });
-
-    // Foro - control acceso
-    const foroForm = document.getElementById("foro-form");
-    const foroPosts = document.getElementById("foro-posts");
-
-    foroForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      if (!isLoggedIn) {
-        alert("Debes iniciar sesión para publicar en el foro.");
+        mainPage.style.display = "block";
+        console.log("Bienvenido:", user.displayName);
+      } else {
         loginPage.style.display = "flex";
         mainPage.style.display = "none";
-        return;
-      }
-
-      const textarea = foroForm.querySelector("textarea");
-      if (textarea.value.trim() !== "") {
-        const nuevoPost = document.createElement("div");
-        nuevoPost.classList.add("post");
-        nuevoPost.innerHTML = `<p><strong>${usuario.value}:</strong> ${textarea.value}</p>`;
-        foroPosts.prepend(nuevoPost);
-        textarea.value = "";
       }
     });
 
-    
-  </script>
+    // ===== Firestore (mensajes) =====
+    const mensajesRef = collection(db, "mensajes");
+    const form = document.getElementById("formulario-mensaje");
+    const input = document.getElementById("mensaje");
+    const contenedor = document.getElementById("mensajes");
 
-  <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (input.value.trim() !== "" && auth.currentUser) {
+        await addDoc(mensajesRef, {
+          texto: input.value,
+          fecha: new Date(),
+          autor: auth.currentUser.displayName
+        });
+        input.value = "";
+      }
+    });
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyDlvvtg68E7mEh71bwqX0YqWL31LTA4Q4A",
-    authDomain: "i-s-a-foro-3bf2d.firebaseapp.com",
-    projectId: "i-s-a-foro-3bf2d",
-    storageBucket: "i-s-a-foro-3bf2d.firebasestorage.app",
-    messagingSenderId: "413622307291",
-    appId: "1:413622307291:web:c6654f75ff038d0ca8bffe",
-    measurementId: "G-0HZ9B1SNWD"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-
-  
-</script>
-
-
-
-<div id="mensajes"></div>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } 
-    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } 
-    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
-  // Configuración Firebase
-  const firebaseConfig = {
-    apiKey: "AIzaSyDlvvtg68E7mEh71bwqX0YqWL31LTA4Q4A",
-    authDomain: "i-s-a-foro-3bf2d.firebaseapp.com",
-    projectId: "i-s-a-foro-3bf2d",
-    storageBucket: "i-s-a-foro-3bf2d.firebasestorage.app",
-    messagingSenderId: "413622307291",
-    appId: "1:413622307291:web:c6654f75ff038d0ca8bffe",
-    measurementId: "G-0HZ9B1SNWD"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
-
-  // Botones y elementos del DOM
-  const loginPage = document.getElementById("login-page");
-  const mainPage = document.getElementById("main-page");
-  const googleLogin = document.getElementById("google-login");
-
-  // Iniciar con Google
-  googleLogin.addEventListener("click", async () => {
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (err) {
-      console.error("Error en login:", err);
-    }
-  });
-
-  // Detectar sesión
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      // Usuario logueado
-      loginPage.style.display = "none";
-      mainPage.style.display = "block";
-      console.log("Bienvenido:", user.displayName);
-    } else {
-      // Usuario no logueado
-      loginPage.style.display = "flex";
-      mainPage.style.display = "none";
-    }
-  });
-
-  // ===== Ejemplo Firestore =====
-  const mensajesRef = collection(db, "mensajes");
-  const form = document.getElementById("formulario-mensaje");
-  const input = document.getElementById("mensaje");
-  const contenedor = document.getElementById("mensajes");
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (input.value.trim() !== "" && auth.currentUser) {
-      await addDoc(mensajesRef, {
-        texto: input.value,
-        fecha: new Date(),
-        autor: auth.currentUser.displayName
+    const q = query(mensajesRef, orderBy("fecha"));
+    onSnapshot(q, (snapshot) => {
+      contenedor.innerHTML = "";
+      snapshot.forEach((doc) => {
+        let p = document.createElement("p");
+        let data = doc.data();
+        p.textContent = `${data.autor || "Anónimo"}: ${data.texto}`;
+        contenedor.appendChild(p);
       });
-      input.value = "";
-    }
-  });
-
-  const q = query(mensajesRef, orderBy("fecha"));
-  onSnapshot(q, (snapshot) => {
-    contenedor.innerHTML = "";
-    snapshot.forEach((doc) => {
-      let p = document.createElement("p");
-      let data = doc.data();
-      p.textContent = `${data.autor || "Anónimo"}: ${data.texto}`;
-      contenedor.appendChild(p);
     });
-  });
-</script>
-
-<!-- Enlazar tu app.js -->
-<script type="module" src="JS.js"></script>
-
-<div class="login-page" id="login-page">
-  <div class="login-box">
-    <h2>Iniciar Sesión</h2>
-    <button id="google-login">Iniciar con Google</button>
-  </div>
-</div>
-
-
-
-</body>
-</html>
-
+  </script>
 </body>
 </html>
