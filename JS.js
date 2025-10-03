@@ -16,6 +16,9 @@ const firebaseConfig = {
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
 
 // Referencia a la colección de mensajes
 const mensajesRef = collection(db, "mensajes");
@@ -47,3 +50,41 @@ onSnapshot(q, (snapshot) => {
     contenedor.appendChild(p);
   });
 });
+
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } 
+from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const userInfo = document.getElementById("userInfo");
+
+// Iniciar sesión
+loginBtn.addEventListener("click", async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    console.log("Usuario logueado:", user.displayName);
+  } catch (error) {
+    console.error("Error al iniciar sesión:", error);
+  }
+});
+
+// Cerrar sesión
+logoutBtn.addEventListener("click", async () => {
+  await signOut(auth);
+});
+
+// Detectar si hay usuario logueado
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    userInfo.textContent = `Bienvenido, ${user.displayName}`;
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "inline-block";
+  } else {
+    userInfo.textContent = "No has iniciado sesión";
+    loginBtn.style.display = "inline-block";
+    logoutBtn.style.display = "none";
+  }
+});
+
+
